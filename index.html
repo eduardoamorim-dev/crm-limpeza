@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Axé Limpeza</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+      }
+      h1 {
+        color: #333;
+      }
+      label {
+        display: block;
+        margin-top: 10px;
+      }
+      input,
+      select {
+        margin-bottom: 10px;
+        width: 200px;
+      }
+      .grupo-container {
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+      #novoGrupo {
+        margin-right: 10px;
+      }
+      button {
+        padding: 10px 20px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        cursor: pointer;
+      }
+      button:hover {
+        background-color: #0056b3;
+      }
+      button.cadastrar {
+        background-color: #28a745; /* Verde */
+      }
+      button.baixarPDF {
+        background-color: #28a745; /* Verde */
+      }
+      button.remover {
+        background-color: #dc3545; /* Vermelho */
+      }
+      .centered-title {
+        text-align: center;
+      }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  </head>
+  <body>
+    <!-- Tela de Cadastro -->
+    <div id="cadastro">
+      <h1 class="centered-title">Axé Limpeza - Cadastro de Pessoas</h1>
+      <hr />
+      <form id="formCadastro">
+        <label for="nome"><h3>Nome</h3></label>
+        <input type="text" id="nome" name="nome" required />
+
+        <label for="data"><h3>Selecionar um grupo</h3></label>
+        <div class="grupo-container">
+          <select id="grupo" name="grupo">
+            <!-- Options will be added dynamically -->
+          </select>
+          <button
+            type="button"
+            onclick="removerGrupo()"
+            class="remover"
+            style="margin-left: 10px"
+          >
+            Remover Grupo
+          </button>
+        </div>
+
+        <hr />
+
+        <div>
+          <button type="button" onclick="cadastrarPessoa()" class="cadastrar">
+            Cadastrar
+          </button>
+          <button type="button" onclick="mostrarVisualizacao()">
+            Visualizar
+          </button>
+        </div>
+
+        <br />
+        <hr />
+
+        <label for="data"><h3>Adicionar um novo grupo</h3></label>
+        <div class="grupo-container">
+          <input type="text" id="novoGrupo" placeholder="Novo Grupo" />
+        </div>
+      </form>
+
+      <div>
+        <label for="data"><h3>Data de Limpeza</h3></label>
+        <input
+          type="number"
+          id="diaGrupo"
+          name="diaGrupo"
+          min="1"
+          max="31"
+          placeholder="Dia"
+          required
+        />
+        <input
+          type="number"
+          id="mesGrupo"
+          name="mesGrupo"
+          min="1"
+          max="12"
+          placeholder="Mês"
+          required
+        />
+        <input
+          type="number"
+          id="anoGrupo"
+          name="anoGrupo"
+          min="1900"
+          max="2100"
+          placeholder="Ano"
+          required
+        />
+      </div>
+
+      <hr />
+
+      <button type="button" onclick="adicionarNovoGrupo()">
+        Adicionar Grupo
+      </button>
+
+      <hr />
+    </div>
+
+    <!-- Tela de Visualização -->
+    <div id="visualizacao" style="display: none">
+      <h1 class="centered-title">
+        Axé Limpeza - Visualização de Pessoas Cadastradas
+      </h1>
+      <div id="listaGrupos"></div>
+      <hr />
+      <button type="button" class="remover" onClick="removerTodosOsGrupos()">
+        Remover Todos os Grupos
+      </button>
+      <button onclick="mostrarCadastro()">Voltar ao Cadastro</button>
+      <button onclick="baixarPDF()" class="baixarPDF">Baixar PDF</button>
+    </div>
+
+    <script>
+      let grupos = [];
+
+      // Função para salvar dados no localStorage
+      function salvarDadosLocalStorage() {
+        localStorage.setItem("grupos", JSON.stringify(grupos));
+      }
+
+      // Função para carregar dados do localStorage
+      function carregarDadosLocalStorage() {
+        const gruposLocalStorage = localStorage.getItem("grupos");
+        if (gruposLocalStorage) {
+          grupos = JSON.parse(gruposLocalStorage);
+          atualizarSelectGrupos();
+          atualizarListaGrupos();
+        }
+      }
+
+      function adicionarNovoGrupo() {
+        const novoGrupo = document.getElementById("novoGrupo").value.trim();
+        const dia = document.getElementById("diaGrupo").value;
+        const mes = document.getElementById("mesGrupo").value;
+        const ano = document.getElementById("anoGrupo").value;
+
+        if (novoGrupo && dia && mes && ano) {
+          const dataLimpeza = `${dia}/${mes}/${ano}`;
+          const grupo = {
+            nome: novoGrupo,
+            dataLimpeza: dataLimpeza,
+            pessoas: [],
+          };
+          grupos.push(grupo);
+          salvarDadosLocalStorage(); // Salva no localStorage após adicionar
+          atualizarSelectGrupos();
+          atualizarListaGrupos();
+          limparFormularioGrupo();
+          alert("Grupo cadastrado com sucesso!");
+        } else {
+          alert("Por favor, preencha todos os campos.");
+        }
+      }
+
+      function removerGrupo() {
+        const grupoSelecionado = document.getElementById("grupo").value;
+        const index = grupos.findIndex(
+          (grupo) => grupo.nome === grupoSelecionado
+        );
+        if (index !== -1) {
+          grupos.splice(index, 1);
+          salvarDadosLocalStorage(); // Salva no localStorage após remover
+          atualizarSelectGrupos();
+          atualizarListaGrupos();
+        }
+      }
+
+      function cadastrarPessoa() {
+        const nome = document.getElementById("nome").value;
+        const grupoSelecionado = document.getElementById("grupo").value;
+
+        if (nome && grupoSelecionado) {
+          const grupo = grupos.find((grupo) => grupo.nome === grupoSelecionado);
+          if (grupo) {
+            const pessoa = {
+              nome: nome,
+            };
+            grupo.pessoas.push(pessoa);
+            salvarDadosLocalStorage(); // Salva no localStorage após cadastrar pessoa
+            alert("Pessoa cadastrada com sucesso!");
+            limparFormulario();
+            atualizarListaGrupos();
+          } else {
+            alert("Grupo não encontrado.");
+          }
+        } else {
+          alert("Por favor, preencha todos os campos.");
+        }
+      }
+
+      function limparFormulario() {
+        document.getElementById("nome").value = "";
+      }
+
+      function limparFormularioGrupo() {
+        document.getElementById("novoGrupo").value = "";
+        document.getElementById("diaGrupo").value = "";
+        document.getElementById("mesGrupo").value = "";
+        document.getElementById("anoGrupo").value = "";
+      }
+
+      function atualizarSelectGrupos() {
+        const selectGrupo = document.getElementById("grupo");
+        selectGrupo.innerHTML = "";
+        grupos.forEach((grupo) => {
+          const option = document.createElement("option");
+          option.value = grupo.nome;
+          option.textContent = grupo.nome;
+          selectGrupo.appendChild(option);
+        });
+      }
+
+      function atualizarListaGrupos() {
+        const listaGrupos = document.getElementById("listaGrupos");
+        listaGrupos.innerHTML = "";
+
+        grupos.forEach((grupo) => {
+          if (grupo.pessoas.length > 0) {
+            const grupoDiv = document.createElement("div");
+            grupoDiv.innerHTML = `<h2>${grupo.nome} - ${grupo.dataLimpeza}</h2>`;
+
+            grupo.pessoas.forEach((pessoa) => {
+              const pessoaDiv = document.createElement("div");
+              const selectId = `selectGrupo-${pessoa.nome}-${grupo.nome}`;
+              const selectHtml = `
+            <select id="${selectId}" onchange="moverPessoa('${pessoa.nome}', '${
+                grupo.nome
+              }', this.value)">
+              ${grupos
+                .map(
+                  (g) =>
+                    `<option value="${g.nome}" ${
+                      grupo.nome === g.nome ? "selected" : ""
+                    }>${g.nome}</option>`
+                )
+                .join("")}
+            </select>
+          `;
+              pessoaDiv.innerHTML = `
+            <hr />
+            ${pessoa.nome}
+            <button type="button" onclick="removerPessoa('${pessoa.nome}', '${grupo.nome}')">
+              Remover
+            </button>
+            ${selectHtml}
+            <hr />
+          `;
+              grupoDiv.appendChild(pessoaDiv);
+            });
+
+            listaGrupos.appendChild(grupoDiv);
+          }
+        });
+      }
+
+      function mostrarVisualizacao() {
+        document.getElementById("cadastro").style.display = "none";
+        document.getElementById("visualizacao").style.display = "block";
+        atualizarListaGrupos();
+      }
+
+      function mostrarCadastro() {
+        document.getElementById("visualizacao").style.display = "none";
+        document.getElementById("cadastro").style.display = "block";
+      }
+
+      function removerTodosOsGrupos() {
+        const confirmacao = confirm(
+          "Tem certeza que deseja limpar todos os grupos cadastrados?"
+        );
+        if (confirmacao) {
+          grupos = [];
+          localStorage.removeItem("grupos"); // Remove do localStorage
+          atualizarSelectGrupos();
+          atualizarListaGrupos();
+        }
+      }
+
+      function moverPessoa(nome, grupoAtual, novoGrupo) {
+        const grupo = grupos.find((g) => g.nome === grupoAtual);
+        const pessoaIndex = grupo.pessoas.findIndex((p) => p.nome === nome);
+        if (pessoaIndex !== -1) {
+          grupos.forEach((g) => {
+            if (g.nome === novoGrupo) {
+              g.pessoas.push(grupo.pessoas[pessoaIndex]);
+            }
+          });
+          grupo.pessoas.splice(pessoaIndex, 1);
+          salvarDadosLocalStorage(); // Salva no localStorage após mover pessoa
+          atualizarListaGrupos();
+        }
+      }
+
+      function removerPessoa(nome, grupoAtual) {
+        const grupo = grupos.find((g) => g.nome === grupoAtual);
+        const pessoaIndex = grupo.pessoas.findIndex((p) => p.nome === nome);
+        if (pessoaIndex !== -1) {
+          grupo.pessoas.splice(pessoaIndex, 1);
+          salvarDadosLocalStorage(); // Salva no localStorage após remover pessoa
+          atualizarListaGrupos();
+        }
+      }
+
+      function baixarPDF() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+
+        let y = 10;
+        grupos.forEach((grupo) => {
+          doc.text(
+            `${grupo.nome} - Data de Limpeza: ${grupo.dataLimpeza}`,
+            10,
+            y
+          );
+
+          y += 10;
+          grupo.pessoas.forEach((pessoa) => {
+            doc.text(`- ${pessoa.nome}`, 15, y);
+            y += 10;
+          });
+          y += 5; // espaço entre os grupos
+        });
+
+        doc.save("lista_de_pessoas.pdf");
+      }
+
+      document.addEventListener("DOMContentLoaded", () => {
+        carregarDadosLocalStorage(); // Carrega dados do localStorage ao carregar a página
+        document.getElementById("visualizacao").style.display = "none";
+      });
+    </script>
+  </body>
+</html>
