@@ -450,32 +450,55 @@
       function baixarPDF() {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
+        let yPosition = 10;
+
         doc.setFont(undefined, "bold");
-        doc.text("CRM Limpeza - Lista de Pessoas Cadastradas", 10, 10);
+        doc.setFontSize(16);
+        doc.text("CRM Limpeza - Lista de Pessoas Cadastradas", 10, yPosition);
+        yPosition += 10;
 
         grupos.forEach((grupo, grupoIndex) => {
-          doc.text(
-            ` ${grupo.nome} - Data: ${grupo.data}`,
-            10,
-            20 + grupoIndex * 10
-          );
+
+          if (yPosition > 280) {
+            doc.addPage();
+            yPosition = 10;
+          }
+
+          doc.setFont(undefined, "bold");
           doc.setFontSize(14);
+          doc.text(
+            `${grupoIndex + 1}. ${grupo.nome} - Data: ${grupo.data}`,
+            10,
+            yPosition
+          );
+          yPosition += 10;
+
           doc.setFont(undefined, "normal");
+          doc.setFontSize(12);
           if (grupo.pessoas.length === 0) {
             doc.text(
               "   Nenhuma pessoa cadastrada nesse grupo.",
               10,
-              30 + grupoIndex * 10
+              yPosition
             );
+            yPosition += 10;
           } else {
             grupo.pessoas.forEach((pessoa, pessoaIndex) => {
+
+              if (yPosition > 280) {
+                doc.addPage();
+                yPosition = 10;
+              }
               doc.text(
-                `   ${grupoIndex + 1}.${pessoaIndex + 1} Nome: ${pessoa.nome}`,
+                `   ${pessoaIndex + 1}. Nome: ${pessoa.nome}`,
                 10,
-                30 + grupoIndex * 10 + pessoaIndex * 10
+                yPosition
               );
+              yPosition += 10;
             });
           }
+
+          yPosition += 5; 
         });
 
         doc.save("CRM_Limpeza_Lista_de_Pessoas_Cadastradas.pdf");
